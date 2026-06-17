@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>AI 走查助手 · Vibe Coding Demo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @keyframes flyIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fly-in { animation: flyIn 0.5s ease-out forwards; opacity: 0; }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+    70%  { box-shadow: 0 0 0 12px rgba(239,68,68,0); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }
+  .marker { animation: pulse-ring 1.5s infinite; }
+  .loader {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .step-active { background:#2563eb; color:#fff; }
+  .step-done   { background:#16a34a; color:#fff; }
+  .step-todo   { background:#e2e8f0; color:#64748b; }
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<header class="bg-white border-b shadow-sm sticky top-0 z-10">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold">AI</div>
+      <div>
+        <h1 class="text-lg font-bold text-slate-800">AI 走查助手</h1>
+        <p class="text-xs text-slate-500">PRD × Figma × 实现 · 一键多模态对比</p>
+      </div>
+    </div>
+    <nav class="flex items-center gap-2 text-xs">
+      <span id="stepBadge1" class="step-active px-3 py-1 rounded-full">1 输入</span>
+      <span class="text-slate-300">›</span>
+      <span id="stepBadge2" class="step-todo px-3 py-1 rounded-full">2 预览</span>
+      <span class="text-slate-300">›</span>
+      <span id="stepBadge3" class="step-todo px-3 py-1 rounded-full">3 结果</span>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ 步骤 1：输入页 ============ -->
+<section id="page1" class="max-w-3xl mx-auto p-6">
+  <div class="bg-white rounded-xl shadow p-8">
+    <h2 class="text-xl font-bold text-slate-800 mb-1">第一步：上传走查素材</h2>
+    <p class="text-sm text-slate-500 mb-6">支持如流 PRD 链接、Figma 设计稿链接、研发实现截图</p>
+
+    <div class="space-y-5">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          <span class="inline-block w-5 h-5 rounded bg-indigo-100 text-indigo-600 text-xs text-center leading-5 mr-1">R</span>
+          我的角色
+        </label>
+        <div class="grid grid-cols-4 gap-2">
+          <button data-role="pm" class="role-btn bg-blue-600 text-white border-blue-600 px-3 py-2 rounded-lg border text-sm font-medium">产品经理</button>
+          <button data-role="design" class="role-btn border-slate-300 hover:bg-slate-50 px-3 py-2 rounded-lg border text-sm font-medium">设计师</button>
+          <button data-role="dev" class="role-btn border-slate-300 hover:bg-slate-50 px-3 py-2 rounded-lg border text-sm font-medium">研发</button>
+          <button data-role="qa" class="role-btn border-slate-300 hover:bg-slate-50 px-3 py-2 rounded-lg border text-sm font-medium">测试</button>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">后续跳转 Context Copilot 时将自动带入当前身份。</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          <span class="inline-block w-5 h-5 rounded bg-blue-100 text-blue-600 text-xs text-center leading-5 mr-1">P</span>
+          PRD 文档链接（如流）
+        </label>
+        <input id="inputPrd" type="text"
+          value="https://ku.baidu-int.com/knowledge/HFVrC7IYBQ/pKzJz9xK/PRD-detail-v2.3"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <p class="text-xs text-slate-400 mt-1">已自动识别：商品详情页 PRD v2.3 · 张三 · 2026-06-10</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          <span class="inline-block w-5 h-5 rounded bg-purple-100 text-purple-600 text-xs text-center leading-5 mr-1">F</span>
+          Figma 设计稿链接
+        </label>
+        <input id="inputFigma" type="text"
+          value="https://www.figma.com/file/abc123/Product-Detail?node-id=12%3A48"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <p class="text-xs text-slate-400 mt-1">已自动识别：商品详情页 / Frame 12:48 · 设计师 李四</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          <span class="inline-block w-5 h-5 rounded bg-orange-100 text-orange-600 text-xs text-center leading-5 mr-1">D</span>
+          研发实现截图
+        </label>
+        <div id="dropZone" class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50">
+          <div class="flex items-center justify-center gap-3">
+            <div class="w-12 h-16 rounded bg-gradient-to-br from-orange-200 to-orange-400 flex-shrink-0"></div>
+            <div class="text-left">
+              <p class="text-sm font-medium text-slate-700">product-detail-impl.png</p>
+              <p class="text-xs text-slate-400">已上传 · 1242 × 2208 · 320 KB</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-3">点击或拖拽替换截图（demo 已预填示例）</p>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="goStep(2)"
+      class="w-full mt-8 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium shadow">
+      下一步：预览素材 →
+    </button>
+  </div>
+</section>
+
+<!-- ============ 步骤 2：预览页 ============ -->
+<section id="page2" class="max-w-7xl mx-auto p-6 hidden">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-xl font-bold text-slate-800">第二步：素材预览</h2>
+      <p class="text-sm text-slate-500">确认无误后启动 AI 多模态对比</p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="goStep(1)" class="px-4 py-2 border border-slate-300 rounded-lg text-sm hover:bg-white">← 返回修改</button>
+      <button onclick="runCompare()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium shadow">
+        开始 AI 对比 →
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-4">
+    <!-- PRD -->
+    <section class="bg-white rounded-xl shadow p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+          <span class="w-5 h-5 rounded bg-blue-100 text-blue-600 text-xs text-center leading-5">P</span>
+          PRD（如流文档）
+        </h3>
+        <span class="text-xs text-green-600">已解析</span>
+      </div>
+      <div class="text-sm text-slate-700 space-y-2 leading-relaxed">
+        <p><b>商品详情页</b></p>
+        <p>1. 主图区展示商品图片，支持轮播</p>
+        <p>2. 标题区显示商品名称、价格</p>
+        <p>3. 操作区：<span class="bg-yellow-100">「立即购买」</span>按钮</p>
+        <p>4. 状态：正常 / 售罄 / <span class="bg-yellow-100">空数据兜底</span></p>
+        <p>5. 主色：<span class="bg-yellow-100">#FF5722</span></p>
+      </div>
+    </section>
+
+    <!-- Figma -->
+    <section class="bg-white rounded-xl shadow p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+          <span class="w-5 h-5 rounded bg-purple-100 text-purple-600 text-xs text-center leading-5">F</span>
+          Figma 设计稿
+        </h3>
+        <span class="text-xs text-green-600">已加载</span>
+      </div>
+      <div class="relative bg-slate-100 rounded-lg aspect-[3/4] overflow-hidden">
+        <div class="absolute inset-3 bg-white rounded shadow-sm flex flex-col">
+          <div class="h-32 bg-gradient-to-br from-orange-200 to-orange-400"></div>
+          <div class="p-3 flex-1 flex flex-col">
+            <p class="font-semibold text-sm">夏季新品 T 恤</p>
+            <p class="text-orange-600 font-bold mt-1">¥199</p>
+            <div class="mt-auto">
+              <button class="w-full bg-orange-500 text-white py-2 rounded text-sm">立即购买</button>
+            </div>
+          </div>
+        </div>
+        <div id="markFigma" class="hidden absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded marker">缺空状态</div>
+      </div>
+    </section>
+
+    <!-- 实现 -->
+    <section class="bg-white rounded-xl shadow p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+          <span class="w-5 h-5 rounded bg-orange-100 text-orange-600 text-xs text-center leading-5">D</span>
+          研发实现截图
+        </h3>
+        <span class="text-xs text-green-600">已上传</span>
+      </div>
+      <div class="relative bg-slate-100 rounded-lg aspect-[3/4] overflow-hidden">
+        <div class="absolute inset-3 bg-white rounded shadow-sm flex flex-col">
+          <div class="h-32 bg-gradient-to-br from-orange-300 to-orange-500"></div>
+          <div class="p-3 flex-1 flex flex-col">
+            <p class="font-semibold text-sm">夏季新品 T 恤</p>
+            <p class="font-bold mt-1" style="color:#FF6633">¥199</p>
+            <div class="mt-auto">
+              <button class="w-full text-white py-2 rounded text-sm" style="background:#FF6633">马上购买</button>
+            </div>
+          </div>
+        </div>
+        <div id="markImpl1" class="hidden absolute bottom-16 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded marker">文案不一致</div>
+        <div id="markImpl2" class="hidden absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded marker">色值偏差</div>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- ============ 步骤 3：结果页 ============ -->
+<section id="page3" class="max-w-7xl mx-auto p-6 hidden">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-xl font-bold text-slate-800">第三步：AI 走查结果</h2>
+      <p class="text-sm text-slate-500">共检出 <span id="totalDiff" class="font-bold text-red-600">3</span> 项差异</p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="goStep(2)" class="px-4 py-2 border border-slate-300 rounded-lg text-sm hover:bg-white">← 返回预览</button>
+      <button onclick="goStep(1)" class="px-4 py-2 border border-slate-300 rounded-lg text-sm hover:bg-white">↺ 重新走查</button>
+    </div>
+  </div>
+
+  <!-- 对比关系卡片 -->
+  <div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-blue-500">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-600">P · PRD</span>
+          <span class="text-slate-400">↔</span>
+          <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-600">F · Figma</span>
+        </div>
+        <span class="text-xs text-slate-500">需求 vs 设计</span>
+      </div>
+      <p class="text-2xl font-bold text-slate-800"><span id="cntPF">1</span> 项差异</p>
+      <p class="text-xs text-slate-500 mt-1">检查需求点是否在设计稿中完整落地</p>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-purple-500">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-600">F · Figma</span>
+          <span class="text-slate-400">↔</span>
+          <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-600">D · 实现</span>
+        </div>
+        <span class="text-xs text-slate-500">设计 vs 实现</span>
+      </div>
+      <p class="text-2xl font-bold text-slate-800"><span id="cntFD">2</span> 项差异</p>
+      <p class="text-xs text-slate-500 mt-1">检查设计稿与研发产物的视觉/文案一致性</p>
+    </div>
+  </div>
+
+  <!-- 对比可视化 -->
+  <div class="grid grid-cols-3 gap-4 mb-6">
+    <section class="bg-white rounded-xl shadow p-4">
+      <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <span class="w-5 h-5 rounded bg-blue-100 text-blue-600 text-xs text-center leading-5">P</span>
+        PRD
+      </h3>
+      <div class="text-xs text-slate-700 space-y-1.5 leading-relaxed">
+        <p><b>商品详情页</b></p>
+        <p>1. 主图区展示商品图片</p>
+        <p>2. 标题区显示商品名称、价格</p>
+        <p>3. 操作区：「立即购买」按钮</p>
+        <p>4. 状态：正常 / 售罄 / <span class="bg-red-100 text-red-700 px-1 rounded">空数据兜底</span></p>
+        <p>5. 主色：#FF5722</p>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl shadow p-4">
+      <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <span class="w-5 h-5 rounded bg-purple-100 text-purple-600 text-xs text-center leading-5">F</span>
+        Figma
+      </h3>
+      <div class="relative bg-slate-100 rounded-lg aspect-[3/4] overflow-hidden">
+        <div class="absolute inset-3 bg-white rounded shadow-sm flex flex-col">
+          <div class="h-24 bg-gradient-to-br from-orange-200 to-orange-400"></div>
+          <div class="p-2 flex-1 flex flex-col">
+            <p class="font-semibold text-xs">夏季新品 T 恤</p>
+            <p class="text-orange-600 font-bold text-xs mt-1">¥199</p>
+            <div class="mt-auto">
+              <button class="w-full bg-orange-500 text-white py-1.5 rounded text-xs">立即购买</button>
+            </div>
+          </div>
+        </div>
+        <div class="absolute top-1 right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded marker">缺空状态</div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl shadow p-4">
+      <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <span class="w-5 h-5 rounded bg-orange-100 text-orange-600 text-xs text-center leading-5">D</span>
+        实现
+      </h3>
+      <div class="relative bg-slate-100 rounded-lg aspect-[3/4] overflow-hidden">
+        <div class="absolute inset-3 bg-white rounded shadow-sm flex flex-col">
+          <div class="h-24 bg-gradient-to-br from-orange-300 to-orange-500"></div>
+          <div class="p-2 flex-1 flex flex-col">
+            <p class="font-semibold text-xs">夏季新品 T 恤</p>
+            <p class="font-bold text-xs mt-1" style="color:#FF6633">¥199</p>
+            <div class="mt-auto">
+              <button class="w-full text-white py-1.5 rounded text-xs" style="background:#FF6633">马上购买</button>
+            </div>
+          </div>
+        </div>
+        <div class="absolute bottom-12 left-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded marker">文案</div>
+        <div class="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded marker">色值</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 差异清单 + 筛选 -->
+  <div class="bg-white rounded-xl shadow p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h3 class="font-semibold text-slate-800">AI 检出差异清单</h3>
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span class="text-slate-500 mr-1">对比对象：</span>
+        <button data-pair="all"  class="filter-pair px-3 py-1 rounded-full border bg-blue-600 text-white border-blue-600">全部</button>
+        <button data-pair="PF"   class="filter-pair px-3 py-1 rounded-full border border-slate-300 hover:bg-slate-50">PRD ↔ Figma</button>
+        <button data-pair="FD"   class="filter-pair px-3 py-1 rounded-full border border-slate-300 hover:bg-slate-50">Figma ↔ 实现</button>
+        <span class="mx-2 text-slate-300">|</span>
+        <span class="text-slate-500 mr-1">状态：</span>
+        <select id="statusSel" class="border border-slate-300 rounded px-2 py-1 text-xs">
+          <option value="all">全部</option>
+          <option value="未处理">未处理</option>
+          <option value="已沟通-待修复">已沟通-待修复</option>
+          <option value="已沟通-保留设计">已沟通-保留设计</option>
+        </select>
+        <span class="mx-2 text-slate-300">|</span>
+        <span class="text-slate-500 mr-1">排序：</span>
+        <select id="sortSel" class="border border-slate-300 rounded px-2 py-1 text-xs">
+          <option value="prio">按优先级（P0→P2）</option>
+          <option value="prioDesc">按优先级（P2→P0）</option>
+          <option value="pair">按对比对象分组</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="loading" class="hidden items-center gap-3 text-slate-500 py-6">
+      <span class="loader"></span> AI 正在多模态对比中…
+    </div>
+    <ul id="diffList" class="space-y-3"></ul>
+    <p id="emptyDiff" class="hidden text-slate-400 text-sm py-6 text-center">当前筛选条件下没有差异 ✅</p>
+  </div>
+</section>
+
+<script>
+const diffs = [
+  {
+    id: 1, level: 'P0', priority: 0, pairKey: 'PF',
+    pairLabel: 'PRD ↔ Figma',
+    title: '缺失「空数据兜底」状态',
+    detail: 'PRD 第 4 条要求支持「空数据兜底」状态，Figma 中未发现对应设计稿。',
+    fix: '设计师补充空状态画面，含插画 + 引导文案。',
+    status: '未处理',
+    reason: '空状态页面还缺少业务兜底文案，设计侧希望先和产品确认真实空数据场景后再补。'
+  },
+  {
+    id: 2, level: 'P1', priority: 1, pairKey: 'FD',
+    pairLabel: 'Figma ↔ 实现',
+    title: '按钮文案不一致',
+    detail: 'Figma 文案为「立即购买」，研发实现为「马上购买」。',
+    fix: '研发同学按 Figma 文案修改为「立即购买」。',
+    status: '未处理',
+    reason: '「马上购买」在当前按钮宽度下不容易换行，也更贴近营销页的转化语气。'
+  },
+  {
+    id: 3, level: 'P2', priority: 2, pairKey: 'FD',
+    pairLabel: 'Figma ↔ 实现',
+    title: '主色色值偏差',
+    detail: 'Figma 主色 #FF5722，实现取色 #FF6633，色相偏差约 4°。',
+    fix: '研发同学统一为设计令牌 token: brand/primary (#FF5722)。',
+    status: '未处理',
+    reason: '实现侧临时复用了历史活动页 token，视觉差异较小，但需要和设计确认是否能进入组件库规范。'
+  }
+];
+
+const levelStyle = {
+  P0: { box: 'bg-red-50 border-red-400',     tag: 'bg-red-500 text-white' },
+  P1: { box: 'bg-orange-50 border-orange-400', tag: 'bg-orange-500 text-white' },
+  P2: { box: 'bg-yellow-50 border-yellow-500', tag: 'bg-yellow-500 text-white' }
+};
+const pairStyle = {
+  PF: 'bg-blue-100 text-blue-700',
+  FD: 'bg-purple-100 text-purple-700'
+};
+
+const roleLabel = { pm: '产品经理', design: '设计师', dev: '研发', qa: '测试' };
+const statusStyle = {
+  '未处理': 'bg-slate-100 text-slate-600',
+  '已沟通-待修复': 'bg-orange-100 text-orange-700',
+  '已沟通-保留设计': 'bg-green-100 text-green-700'
+};
+let selectedRole = 'pm';
+let currentPair = 'all';
+let currentStatus = 'all';
+let currentSort = 'prio';
+
+function goStep(n) {
+  ['page1','page2','page3'].forEach((id,i)=>{
+    document.getElementById(id).classList.toggle('hidden', (i+1)!==n);
+  });
+  [1,2,3].forEach(i=>{
+    const el = document.getElementById('stepBadge'+i);
+    el.className = 'px-3 py-1 rounded-full ' + (i<n?'step-done':(i===n?'step-active':'step-todo'));
+  });
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function runCompare() {
+  goStep(3);
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('loading').classList.add('flex');
+  document.getElementById('diffList').innerHTML = '';
+  document.getElementById('emptyDiff').classList.add('hidden');
+
+  setTimeout(() => {
+    document.getElementById('loading').classList.add('hidden');
+    renderDiffs();
+  }, 1500);
+}
+
+function renderDiffs() {
+  const list = document.getElementById('diffList');
+  list.innerHTML = '';
+
+  let data = diffs.filter(d => (currentPair==='all' || d.pairKey===currentPair) && (currentStatus==='all' || d.status===currentStatus));
+  if (currentSort==='prio')     data.sort((a,b)=>a.priority-b.priority);
+  if (currentSort==='prioDesc') data.sort((a,b)=>b.priority-a.priority);
+  if (currentSort==='pair')     data.sort((a,b)=>a.pairKey.localeCompare(b.pairKey) || a.priority-b.priority);
+
+  if (data.length===0) {
+    document.getElementById('emptyDiff').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('emptyDiff').classList.add('hidden');
+
+  data.forEach((d, i) => {
+    const s = levelStyle[d.level];
+    const ps = pairStyle[d.pairKey];
+    const li = document.createElement('li');
+    li.className = `fly-in border-l-4 rounded p-4 ${s.box}`;
+    li.style.animationDelay = (i*0.08)+'s';
+    li.innerHTML = `
+      <div class="flex items-start justify-between gap-3 mb-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-bold px-2 py-0.5 rounded ${s.tag}">${d.level}</span>
+          <span class="text-xs font-medium px-2 py-0.5 rounded ${ps}">${d.pairLabel}</span>
+        </div>
+        <span class="shrink-0 text-xs font-medium px-2 py-0.5 rounded ${statusStyle[d.status]}">${d.status}</span>
+      </div>
+      <p class="font-semibold text-slate-800">${d.title}</p>
+      <p class="text-sm text-slate-600 mt-1">${d.detail}</p>
+      <p class="text-sm text-slate-700 mt-2"><b>修复建议：</b>${d.fix}</p>
+      <div class="mt-3 flex items-center justify-between gap-3">
+        <p class="text-xs text-slate-500">路演 mock：可带入 Context Copilot 转成对方听得懂的话。</p>
+        <button onclick="openContextCopilot(${d.id})" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow">用 Context Copilot 沟通 →</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function getTargetRole(diff) {
+  if (diff.pairKey === 'PF') return selectedRole === 'pm' ? 'design' : 'pm';
+  if (diff.pairKey === 'FD') return selectedRole === 'design' ? 'dev' : 'design';
+  return 'dev';
+}
+
+function openContextCopilot(id) {
+  const diff = diffs.find(d => d.id === id);
+  if (!diff) return;
+  const payload = {
+    source: 'ai-review-demo',
+    diff,
+    myRole: selectedRole,
+    myRoleLabel: roleLabel[selectedRole],
+    audience: getTargetRole(diff),
+    suggestedReason: diff.reason
+  };
+  localStorage.setItem('cc_review_diff', JSON.stringify(payload));
+  const url = '/#reviewDiff=' + encodeURIComponent(JSON.stringify(payload)) + '&t=' + Date.now();
+  window.open(url, window.self !== window.top ? '_top' : '_blank');
+}
+
+function applyCopilotResult(result) {
+  const diff = diffs.find(d => String(d.id) === String(result.diffId));
+  if (!diff) return;
+  diff.status = result.status;
+  renderDiffs();
+}
+
+document.querySelectorAll('.role-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    selectedRole = btn.dataset.role;
+    document.querySelectorAll('.role-btn').forEach(b=>{
+      b.className = 'role-btn border-slate-300 hover:bg-slate-50 px-3 py-2 rounded-lg border text-sm font-medium';
+    });
+    btn.className = 'role-btn bg-blue-600 text-white border-blue-600 px-3 py-2 rounded-lg border text-sm font-medium';
+  });
+});
+
+document.querySelectorAll('.filter-pair').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    currentPair = btn.dataset.pair;
+    document.querySelectorAll('.filter-pair').forEach(b=>{
+      b.className = 'filter-pair px-3 py-1 rounded-full border border-slate-300 hover:bg-slate-50';
+    });
+    btn.className = 'filter-pair px-3 py-1 rounded-full border bg-blue-600 text-white border-blue-600';
+    renderDiffs();
+  });
+});
+document.getElementById('statusSel').addEventListener('change', e=>{
+  currentStatus = e.target.value;
+  renderDiffs();
+});
+document.getElementById('sortSel').addEventListener('change', e=>{
+  currentSort = e.target.value;
+  renderDiffs();
+});
+window.addEventListener('storage', e=>{
+  if (e.key !== 'cc_review_result' || !e.newValue) return;
+  applyCopilotResult(JSON.parse(e.newValue));
+});
+window.addEventListener('focus', ()=>{
+  const raw = localStorage.getItem('cc_review_result');
+  if (!raw) return;
+  applyCopilotResult(JSON.parse(raw));
+});
+</script>
+</body>
+</html>
