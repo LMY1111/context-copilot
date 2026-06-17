@@ -1,3 +1,10 @@
+export interface InspectionContext {
+  pairKey: 'PF' | 'FD'
+  audience: string // maps pair to comm audience
+  attachments: { id: number; name: string; url: string }[]
+  diffs: { level: string; pairLabel: string; title: string; detail: string; fix: string }[]
+}
+
 export const MY_ROLES = [
   { id: 'pm', label: '产品经理', emoji: '📋' },
   { id: 'dev', label: '研发工程师', emoji: '💻' },

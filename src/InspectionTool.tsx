@@ -1,6 +1,12 @@
 import { useState } from 'react'
+import type { InspectionContext } from './types'
 
 type Step = 1 | 2 | 3
+
+// Mock blob URLs for demo attachments (data URIs of tiny colored squares)
+const PRD_MOCK_URL = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160"><rect width="120" height="160" fill="#DBEAFE"/><text x="60" y="85" text-anchor="middle" font-size="12" fill="#1D4ED8">PRD</text></svg>')
+const FIGMA_MOCK_URL = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160"><rect width="120" height="160" fill="#EDE9FE"/><text x="60" y="85" text-anchor="middle" font-size="12" fill="#7C3AED">Figma</text></svg>')
+const IMPL_MOCK_URL = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160"><rect width="120" height="160" fill="#FFEDD5"/><text x="60" y="85" text-anchor="middle" font-size="11" fill="#C2410C">Dev Impl</text></svg>')
 
 const diffs = [
   { id: 1, level: 'P0', priority: 0, pairKey: 'PF', pairLabel: 'PRD ↔ Figma', title: '缺失「空数据兜底」状态', detail: 'PRD 第 4 条要求支持「空数据兜底」状态，Figma 中未发现对应设计稿。', fix: '设计师补充空状态画面，含插画 + 引导文案。' },
@@ -18,12 +24,28 @@ const pairStyle: Record<string, string> = {
   FD: 'bg-purple-100 text-purple-700',
 }
 
-export default function InspectionTool() {
+export default function InspectionTool({ onNavigateToComm }: { onNavigateToComm: (ctx: InspectionContext) => void }) {
   const [step, setStep] = useState<Step>(1)
   const [loading, setLoading] = useState(false)
   const [filterPair, setFilterPair] = useState('all')
   const [sort, setSort] = useState('prio')
   const [started, setStarted] = useState(false)
+
+  const handleNavigate = (pairKey: 'PF' | 'FD') => {
+    // audience mapping: PF → design (talk to designer), FD → dev (talk to dev)
+    const audience = pairKey === 'PF' ? 'design' : 'dev'
+    const relevantDiffs = diffs.filter(d => d.pairKey === pairKey)
+    const attachments = pairKey === 'PF'
+      ? [
+          { id: 1, name: 'PRD-商品详情页.png', url: PRD_MOCK_URL },
+          { id: 2, name: 'Figma-商品详情页.png', url: FIGMA_MOCK_URL },
+        ]
+      : [
+          { id: 3, name: 'Figma-商品详情页.png', url: FIGMA_MOCK_URL },
+          { id: 4, name: '研发实现截图.png', url: IMPL_MOCK_URL },
+        ]
+    onNavigateToComm({ pairKey, audience, attachments, diffs: relevantDiffs })
+  }
 
   const goStep = (n: Step) => { setStep(n); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
@@ -188,7 +210,11 @@ export default function InspectionTool() {
                 <span className="ml-auto text-xs text-slate-500 font-normal">需求 vs 设计</span>
               </div>
               <p className="text-2xl font-bold text-slate-800">1 项差异</p>
-              <p className="text-xs text-slate-500 mt-1">检查需求点是否在设计稿中完整落地</p>
+              <p className="text-xs text-slate-500 mt-1 mb-3">检查需求点是否在设计稿中完整落地</p>
+              <button onClick={() => handleNavigate('PF')}
+                className="w-full text-xs py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium">
+                💬 去沟通助手跟进 →
+              </button>
             </div>
             <div className="bg-white rounded-xl shadow p-5 border-l-4 border-purple-500">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
@@ -198,7 +224,11 @@ export default function InspectionTool() {
                 <span className="ml-auto text-xs text-slate-500 font-normal">设计 vs 实现</span>
               </div>
               <p className="text-2xl font-bold text-slate-800">2 项差异</p>
-              <p className="text-xs text-slate-500 mt-1">检查设计稿与研发产物的视觉/文案一致性</p>
+              <p className="text-xs text-slate-500 mt-1 mb-3">检查设计稿与研发产物的视觉/文案一致性</p>
+              <button onClick={() => handleNavigate('FD')}
+                className="w-full text-xs py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium">
+                💬 去沟通助手跟进 →
+              </button>
             </div>
           </div>
 

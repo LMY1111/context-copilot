@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { AUDIENCES, MY_ROLES, MOCK, type AnalysisResult, type Attachment } from './types'
+import { AUDIENCES, MY_ROLES, MOCK, type AnalysisResult, type Attachment, type InspectionContext } from './types'
 import ContextAttachments from './ContextAttachments'
 import ResultPanel from './ResultPanel'
 import InspectionTool from './InspectionTool'
@@ -39,7 +39,7 @@ function EmptyState() {
   )
 }
 
-function CommTool() {
+function CommTool({ inspectionCtx, onClearCtx }: { inspectionCtx: InspectionContext | null; onClearCtx: () => void }) {
   const [text, setText] = useState('')
   const [audience, setAudience] = useState('dev')
   const [myRole, setMyRole] = useState('pm')
@@ -49,6 +49,16 @@ function CommTool() {
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [stepIdx, setStepIdx] = useState(0)
   const stepRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Apply inspection context when it arrives
+  useEffect(() => {
+    if (!inspectionCtx) return
+    setAudience(inspectionCtx.audience)
+    setAttachments(inspectionCtx.attachments)
+    setText('')
+    setStatus('idle')
+    setResult(null)
+  }, [inspectionCtx])
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -132,8 +142,31 @@ function CommTool() {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">你想说什么</label>
-          <textarea value={text} onChange={e => setText(e.target.value)} rows={5}
-            placeholder="这个需求怎么还没开发完？"
+          {/* Inspection context diffs block — read-only, shown above free-text input */}
+          {inspectionCtx && (
+            <div className="mb-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
+                  走查差异 · {inspectionCtx.pairKey === 'PF' ? 'PRD ↔ Figma' : 'Figma ↔ 实现'}
+                </span>
+                <button onClick={() => { onClearCtx(); setAttachments([]) }} className="text-[10px] text-gray-400 hover:text-red-400 transition">✕ 清除</button>
+              </div>
+              <div className="space-y-2">
+                {inspectionCtx.diffs.map((d, i) => (
+                  <div key={i} className="bg-white rounded-lg p-2.5 border border-indigo-100">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${d.level === 'P0' ? 'bg-red-500 text-white' : d.level === 'P1' ? 'bg-orange-500 text-white' : 'bg-yellow-500 text-white'}`}>{d.level}</span>
+                      <span className="text-xs font-semibold text-slate-700">{d.title}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">{d.detail}</p>
+                    <p className="text-xs text-slate-700 mt-1"><span className="font-medium">修复建议：</span>{d.fix}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <textarea value={text} onChange={e => setText(e.target.value)} rows={inspectionCtx ? 3 : 5}
+            placeholder={inspectionCtx ? '描述你的修改需求…' : '这个需求怎么还没开发完？'}
             className="w-full resize-none text-sm text-gray-800 placeholder-gray-300 outline-none leading-relaxed" />
         </div>
 
@@ -215,12 +248,17 @@ const NAV_ITEMS: { id: Tool; icon: string; label: string; sub: string }[] = [
 export default function App() {
   const [tool, setTool] = useState<Tool>('comm')
   const [modal, setModal] = useState(false)
+  const [inspectionCtx, setInspectionCtx] = useState<InspectionContext | null>(null)
+
+  const handleNavigateToComm = (ctx: InspectionContext) => {
+    setInspectionCtx(ctx)
+    setTool('comm')
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
       {modal && <ComingSoonModal onClose={() => setModal(false)} />}
 
-      {/* Top nav */}
       <nav className="border-b border-gray-100 bg-white/80 backdrop-blur sticky top-0 z-40 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">PI</div>
@@ -236,7 +274,6 @@ export default function App() {
       </nav>
 
       <div className="flex flex-1">
-        {/* Sidebar */}
         <aside className="w-52 shrink-0 border-r border-gray-100 bg-white flex flex-col py-4 px-3 gap-1">
           {NAV_ITEMS.map(item => (
             <button key={item.id} onClick={() => setTool(item.id)}
@@ -250,7 +287,6 @@ export default function App() {
           ))}
         </aside>
 
-        {/* Main content */}
         <div className="flex-1 min-w-0 flex flex-col">
           {tool === 'comm' && (
             <div className="px-6 pt-5 pb-1">
@@ -258,7 +294,10 @@ export default function App() {
               <p className="text-gray-400 text-sm mt-0.5">Before you send, understand how it will be received.</p>
             </div>
           )}
-          {tool === 'comm' ? <CommTool /> : <InspectionTool />}
+          {tool === 'comm'
+            ? <CommTool inspectionCtx={inspectionCtx} onClearCtx={() => setInspectionCtx(null)} />
+            : <InspectionTool onNavigateToComm={handleNavigateToComm} />
+          }
         </div>
       </div>
     </div>
