@@ -1,3 +1,13 @@
+export const MY_ROLES = [
+  { id: 'pm', label: '产品经理', emoji: '📋' },
+  { id: 'dev', label: '研发工程师', emoji: '💻' },
+  { id: 'design', label: 'UI设计师', emoji: '🎨' },
+  { id: 'qa', label: '测试工程师', emoji: '🔍' },
+  { id: 'manager', label: '项目经理', emoji: '📊' },
+  { id: 'sales', label: '销售', emoji: '💼' },
+  { id: 'other', label: '其他', emoji: '👤' },
+]
+
 export const AUDIENCES = [
   { id: 'dev', label: '研发', emoji: '💻' },
   { id: 'design', label: '设计', emoji: '🎨' },

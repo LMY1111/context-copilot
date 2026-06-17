@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { AUDIENCES, MOCK, type AnalysisResult, type Attachment } from './types'
+import { AUDIENCES, MY_ROLES, MOCK, type AnalysisResult, type Attachment } from './types'
 import ContextAttachments from './ContextAttachments'
 import ResultPanel from './ResultPanel'
 
@@ -39,6 +39,8 @@ function EmptyState() {
 export default function App() {
   const [text, setText] = useState('')
   const [audience, setAudience] = useState('dev')
+  const [myRole, setMyRole] = useState('pm')
+  const [myRoleOpen, setMyRoleOpen] = useState(false)
   const [status, setStatus] = useState<'idle' | 'thinking' | 'done'>('idle')
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [modal, setModal] = useState(false)
@@ -78,7 +80,7 @@ export default function App() {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, audience, hasAttachments: attachments.length > 0 }),
+        body: JSON.stringify({ message: text, audience, myRole, hasAttachments: attachments.length > 0 }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -97,7 +99,9 @@ export default function App() {
       setStatus('done')
       setResult(MOCK[audience])
     }, THINKING_STEPS.length * 600)
-  }, [text, audience, attachments])
+  }, [text, audience, myRole, attachments])
+
+  const myRoleObj = MY_ROLES.find(r => r.id === myRole)!
 
   const audienceLabel = AUDIENCES.find(a => a.id === audience)?.label ?? ''
   const checklist = [
@@ -127,6 +131,30 @@ export default function App() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 leading-tight">Context Copilot <span className="text-indigo-500">·</span> 沟通副驾</h1>
             <p className="text-gray-400 text-sm mt-1">Before you send, understand how it will be received.</p>
+          </div>
+
+          {/* Your Role */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Your Role</span>
+                <span className="text-base">{myRoleObj.emoji}</span>
+                <span className="text-sm font-medium text-gray-800">{myRoleObj.label}</span>
+              </div>
+              <button onClick={() => setMyRoleOpen(o => !o)} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition">
+                {myRoleOpen ? '收起' : '修改'}
+              </button>
+            </div>
+            {myRoleOpen && (
+              <div className="mt-3 grid grid-cols-4 gap-1.5">
+                {MY_ROLES.map(r => (
+                  <button key={r.id} onClick={() => { setMyRole(r.id); setMyRoleOpen(false) }}
+                    className={`flex flex-col items-center gap-0.5 py-2 rounded-xl border text-[11px] font-medium transition-all ${myRole === r.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-gray-50 border-gray-100 text-gray-600 hover:bg-indigo-50 hover:border-indigo-200'}`}>
+                    <span className="text-base">{r.emoji}</span>{r.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
