@@ -210,11 +210,7 @@ export default function InspectionTool({ onNavigateToComm }: { onNavigateToComm:
                 <span className="ml-auto text-xs text-slate-500 font-normal">需求 vs 设计</span>
               </div>
               <p className="text-2xl font-bold text-slate-800">1 项差异</p>
-              <p className="text-xs text-slate-500 mt-1 mb-3">检查需求点是否在设计稿中完整落地</p>
-              <button onClick={() => handleNavigate('PF')}
-                className="w-full text-xs py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium">
-                💬 去沟通助手跟进 →
-              </button>
+              <p className="text-xs text-slate-500 mt-1">检查需求点是否在设计稿中完整落地</p>
             </div>
             <div className="bg-white rounded-xl shadow p-5 border-l-4 border-purple-500">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
@@ -224,11 +220,7 @@ export default function InspectionTool({ onNavigateToComm }: { onNavigateToComm:
                 <span className="ml-auto text-xs text-slate-500 font-normal">设计 vs 实现</span>
               </div>
               <p className="text-2xl font-bold text-slate-800">2 项差异</p>
-              <p className="text-xs text-slate-500 mt-1 mb-3">检查设计稿与研发产物的视觉/文案一致性</p>
-              <button onClick={() => handleNavigate('FD')}
-                className="w-full text-xs py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium">
-                💬 去沟通助手跟进 →
-              </button>
+              <p className="text-xs text-slate-500 mt-1">检查设计稿与研发产物的视觉/文案一致性</p>
             </div>
           </div>
 
@@ -271,6 +263,13 @@ export default function InspectionTool({ onNavigateToComm }: { onNavigateToComm:
                       <p className="font-semibold text-slate-800">{d.title}</p>
                       <p className="text-sm text-slate-600 mt-1">{d.detail}</p>
                       <p className="text-sm text-slate-700 mt-2"><b>修复建议：</b>{d.fix}</p>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-xs text-slate-400">可带入沟通助手，转成对方听得懂的话。</span>
+                        <button onClick={() => handleNavigate(d.pairKey as 'PF' | 'FD')}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium whitespace-nowrap">
+                          用 Context Copilot 沟通 →
+                        </button>
+                      </div>
                     </li>
                   ))
                 }
